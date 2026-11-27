@@ -1,24 +1,41 @@
-name: Pipeline CI Node.js
+name: Pipeline CI/CD Node.js
 
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  build:
+  ci-build-e-testes:
     runs-on: ubuntu-latest
-
     steps:
-    - name: 1. Checkout do código
-      uses: actions/checkout@v4
+      - name: 1. Checkout do código
+        uses: actions/checkout@v4
 
-    - name: 2. Configurar Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      - name: 2. Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-    - name: 3. Instalar dependências
-      run: npm install --no-fund || echo "Preparando ambiente..."
+      - name: 3. Instalar dependências
+        run: npm install
 
-    - name: 4. Executar testes automatizados
-      run: npm test || echo "Testes automatizados integrados e executados com sucesso!"
+      - name: 4. Executar testes automatizados
+        run: npm test
+
+  cd-build-e-deploy:
+    needs: ci-build-e-testes
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. Checkout do código
+        uses: actions/checkout@v4
+
+      - name: 2. Construir imagem Docker
+        run: docker build -t todo-api:latest .
+
+      - name: 3. Validar container e simular entrega contínua (CD)
+        run: |
+          docker run -d --name todo-test -p 3000:3000 todo-api:latest
+          sleep 3
+          curl -f http://localhost:3000
+          docker stop todo-test
+          echo "Entrega contínua validada com sucesso!"
